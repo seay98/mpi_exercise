@@ -122,15 +122,26 @@ void DGEMM(
     int const ldA, double const* const B, int const ldB,
     double const beta, double* const C, int const ldC)
 {
-    CBLAS_LAYOUT const layout = CblasColMajor;
-    CBLAS_TRANSPOSE const transA = CblasNoTrans;
-    CBLAS_TRANSPOSE const transB = CblasNoTrans;
+    // CBLAS_LAYOUT const layout = CblasColMajor;
+    // CBLAS_TRANSPOSE const transA = CblasNoTrans;
+    // CBLAS_TRANSPOSE const transB = CblasNoTrans;
 
-    cblas_dgemm(layout, transA, transB,
-        m, n, k,
-        alpha, A, ldA,
-        B, ldB,
-        beta, C, ldC);
+    // cblas_dgemm(layout, transA, transB,
+    //     m, n, k,
+    //     alpha, A, ldA,
+    //     B, ldB,
+    //     beta, C, ldC);
+
+    for (int j = 0; j < m; ++j) {
+        for (int l = 0; l < k; ++l) {
+            for (int i = 0; i < n; ++i) {
+                if (l == 0) {
+                    C[j + i*ldC] *= beta;
+                }
+                C[j + i*ldC] += alpha * A[j + l*ldA] * B[l + i*ldB];
+            }
+        }
+    }
 }
 
 void rowwise_DGEMM(
@@ -139,15 +150,26 @@ void rowwise_DGEMM(
     int const ldA, double const* const B, int const ldB,
     double const beta, double* const C, int const ldC)
 {
-    CBLAS_LAYOUT const layout = CblasColMajor;
-    CBLAS_TRANSPOSE const transA = CblasNoTrans;
-    CBLAS_TRANSPOSE const transB = CblasNoTrans;
+    // CBLAS_LAYOUT const layout = CblasColMajor;
+    // CBLAS_TRANSPOSE const transA = CblasNoTrans;
+    // CBLAS_TRANSPOSE const transB = CblasNoTrans;
 
-    cblas_dgemm(layout, transA, transB,
-        m, n, k,
-        alpha, A, ldA,
-        B, ldB,
-        beta, C, ldC);
+    // cblas_dgemm(layout, transA, transB,
+    //     m, n, k,
+    //     alpha, A, ldA,
+    //     B, ldB,
+    //     beta, C, ldC);
+
+    for (int i = 0; i < n; ++i) {
+        for (int l = 0; l < k; ++l) {
+            for (int j = 0; j < m; ++j) {
+                if (l == 0) {
+                    C[j + i*ldC] *= beta;
+                }
+                C[j + i*ldC] += alpha * A[j + l*ldA] * B[l + i*ldB];
+            }
+        }
+    }
 }
 
 

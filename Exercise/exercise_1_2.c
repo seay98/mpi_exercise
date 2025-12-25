@@ -115,14 +115,20 @@ void DGEMV(
     double const* const x, int const incx,
     double const beta, double* const y, int const incy)
 {
-    CBLAS_LAYOUT const layout = CblasColMajor;
-    CBLAS_TRANSPOSE const transA = CblasNoTrans;
+    // CBLAS_LAYOUT const layout = CblasColMajor;
+    // CBLAS_TRANSPOSE const transA = CblasNoTrans;
 
-    cblas_dgemv(layout, transA, 
-        m, n,
-        alpha, A, ldA,
-        x, incx,
-        beta, y, incy);
+    // cblas_dgemv(layout, transA, 
+    //     m, n,
+    //     alpha, A, ldA,
+    //     x, incx,
+    //     beta, y, incy);
+    for (int j = 0; j < m; ++j) {
+        y[j*incy] *= beta;
+        for (int i = 0; i < n; ++i) {
+            y[j*incy] += alpha * A[j + i*ldA] * x[i*incx];
+        }
+    }
 }
 
 void rowwise_DGEMV(
@@ -131,14 +137,22 @@ void rowwise_DGEMV(
     double const* const x, int const incx,
     double const beta, double* const y, int const incy)
 {
-    CBLAS_LAYOUT const layout = CblasColMajor;
-    CBLAS_TRANSPOSE const transA = CblasNoTrans;
+    // CBLAS_LAYOUT const layout = CblasColMajor;
+    // CBLAS_TRANSPOSE const transA = CblasNoTrans;
 
-    cblas_dgemv(layout, transA, 
-        m, n,
-        alpha, A, ldA,
-        x, incx,
-        beta, y, incy);
+    // cblas_dgemv(layout, transA, 
+    //     m, n,
+    //     alpha, A, ldA,
+    //     x, incx,
+    //     beta, y, incy);
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            if (i == 0) {
+                y[j*incy] *= beta;
+            }
+            y[j*incy] += alpha * A[j + i*ldA] * x[i*incx];
+        }
+    }
 }
 
 

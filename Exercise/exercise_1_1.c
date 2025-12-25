@@ -112,12 +112,20 @@ static bool test_DDOT(int const n, BLAS_DDOT dot, double const epsilon, unsigned
 // the corresponding BLAS function with your own implementation.
 void DAXPY(int const n, double const alpha, double* const x, int const incx, double* const y, int const incy)
 {
-    cblas_daxpy(n, alpha, x, incx, y, incy);
+    // cblas_daxpy(n, alpha, x, incx, y, incy);
+    for (int i = 0; i < n; ++i) {
+        y[i * incy] += alpha * x[i * incx];
+    }
 }
 
 double DDOT(int const n, double* const x, int const incx, double* const y, int const incy)
 {
-    return cblas_ddot(n, x, incx, y, incy);
+    // return cblas_ddot(n, x, incx, y, incy);
+    double result = 0.0;
+    for (int i = 0; i < n; ++i) {
+        result += x[i * incx] * y[i * incy];
+    }
+    return result;
 }
 
 static bool generate_operand_dimension(int* const n)
