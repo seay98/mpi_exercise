@@ -25,7 +25,7 @@ AR     ?= ar
 ARFLAGS ?= rcs
 
 # -------- flags --------
-CFLAGS  ?= -O2 -Wall
+CFLAGS  ?= -Og -Wall -g
 LDFLAGS ?=
 
 # -------- BLAS pkgconf package name --------
@@ -92,5 +92,5 @@ print-vars:
 
 .PHONY: test
 test:
-	@echo "Running exercise_1_3"
-	@$(BIN_DIR)/exercise_1_3 || echo ": Failed to run exercise_1_3, stat $$?"
+	@echo "Running exercise_2_1"
+	@$(BIN_DIR)/exercise_2_1 || echo ": Failed to run exercise_2_1, stat $$?"

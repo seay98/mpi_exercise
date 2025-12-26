@@ -52,6 +52,11 @@ static bool test_muptiply(int const m, int const k, int const n, GEMM gemm, doub
     initialize_problem_matrices(m, k, n, &A, &B, &C);
     populate_compatible_random_matrix_pairs(m, k, n, seed, A, B);
 
+    // int my = 2, ny = 2, ky = 2;
+    // A = (double[]){1.0, 1.0, 2.0, 2.0};
+    // B = (double[]){3.0, 4.0, 5.0, 6.0};
+    // C = (double[]){0.0, 0.0, 0.0, 0.0};
+
     gemm(m, k, n, A, B, C);
     bool result_is_correct = is_product(m, k, n, A, B, C, epsilon);
 
@@ -69,41 +74,70 @@ void parallel_gemm(
 {
     int mpi_rank;
     int num_of_ranks;
+
+    int base, rem;
+    int* cols = NULL;
+    int* col_disp = NULL;
+    // MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_of_ranks);
 
     // broadcast A to all ranks
     MPI_Bcast((void*)A, m*k, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // Get number of columns per rank
-    int n_local_col = (n + num_of_ranks - 1) / num_of_ranks;
-    int* sendcount = (int*) calloc(num_of_ranks, sizeof(int));
-    int* displs = (int*) calloc(num_of_ranks, sizeof(int));
+    // Rank 0 computes the column distribution
+    if (mpi_rank == 0) {
+        base = n / num_of_ranks;
+        rem = n % num_of_ranks;
+        cols = (int*) calloc(num_of_ranks, sizeof(int));
+        col_disp = (int*) calloc(num_of_ranks, sizeof(int));
+        for (int i = 0; i < num_of_ranks; ++i) {
+            cols[i] = base + (i < rem ? 1 : 0);
+            col_disp[i] = (i == 0) ? 0 : col_disp[i - 1] + cols[i - 1];
+        }
+    }
+    // Broadcast column distribution to all ranks
+    if (cols == NULL) {
+        cols = (int*) calloc(num_of_ranks, sizeof(int));
+    }
+    if (col_disp == NULL) {
+        col_disp = (int*) calloc(num_of_ranks, sizeof(int));
+    }
+    MPI_Bcast(cols, num_of_ranks, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(col_disp, num_of_ranks, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Prepare counts and displs for Scatterv and Gatherv
+    int* sendcounts = sendcounts = (int*) calloc(num_of_ranks, sizeof(int));
+    int* displs = displs = (int*) calloc(num_of_ranks, sizeof(int));
     int* recvcounts = (int*) calloc(num_of_ranks, sizeof(int));
     int* recvdispls = (int*) calloc(num_of_ranks, sizeof(int));
     for (int i = 0; i < num_of_ranks; ++i) {
-        sendcount[i] = (i < n / n_local_col) ? n_local_col * k : (n % n_local_col) * k;
-        displs[i] = (i == 0) ? 0 : displs[i - 1] + sendcount[i - 1];
-        recvcounts[i] = (i < n / n_local_col) ? n_local_col * m : (n % n_local_col) * m;
-        recvdispls[i] = (i == 0) ? 0 : recvdispls[i - 1] + recvcounts[i - 1];
+        sendcounts[i] = cols[i] * k;
+        displs[i] = col_disp[i] * k;
+        recvcounts[i] = cols[i] * m;
+        recvdispls[i] = col_disp[i] * m;
     }
-    int n_local_elements = sendcount[mpi_rank];
+
+    int n_local_cols = cols[mpi_rank];
+    int n_local_elements = n_local_cols * k;
 
     double* B_local = (double*) calloc(n_local_elements, sizeof(double));
-    double* C_local = (double*) calloc(m * (n_local_elements / k), sizeof(double));
+    double* C_local = (double*) calloc(m * n_local_cols, sizeof(double));
 
     // Scatter B to all ranks
-    MPI_Scatterv((void*)B, sendcount, displs, MPI_DOUBLE, 
+    MPI_Scatterv((void*)B, sendcounts, displs, MPI_DOUBLE, 
                 B_local, n_local_elements, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     
     // Each rank computes its local C
-    multiply_matrices(m, k, n_local_elements / k, A, B_local, C_local);
+    multiply_matrices(m, k, n_local_cols, A, B_local, C_local);
 
     // Gather C from all ranks
-    MPI_Gatherv(C_local, m * (n_local_elements / k), MPI_DOUBLE,
+    MPI_Gatherv(C_local, m * n_local_cols, MPI_DOUBLE,
                 C, recvcounts, recvdispls, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        
-    free(sendcount);
+
+    free(cols);
+    free(col_disp);
+    free(sendcounts);
     free(displs);
     free(recvcounts);
     free(recvdispls);
@@ -142,17 +176,28 @@ int main(int argc, char* argv[])
     int k = 0;
     int n = 0;
 
+    int rank = 0;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
     while (generate_square_matrix_dimension(&m, &k, &n)) {
         bool const test_pass = test_muptiply(m, k, n, tested_gemm, epsilon, seed);
+        if (rank == 0 && !test_pass) {
+                printf("Multiplication failed for: m=%d, k=%d, n=%d\n", m, k, n);
+        }
         if (!test_pass) {
-            printf("Multiplication failed for: m=%d, k=%d, n=%d\n", m, k, n);
             all_test_pass = false;
         }
     }
+
+    MPI_Bcast(&all_test_pass, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+
+    MPI_Finalize();
 
     if (!all_test_pass) {
         return EXIT_FAILURE;
     }
 
+    // printf("All tests passed\n");
     return EXIT_SUCCESS;
 }
