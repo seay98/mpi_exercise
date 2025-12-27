@@ -25,7 +25,7 @@ AR     ?= ar
 ARFLAGS ?= rcs
 
 # -------- flags --------
-CFLAGS  ?= -Og -Wall -g
+CFLAGS  ?= -O3 -Wall
 LDFLAGS ?=
 
 # -------- BLAS pkgconf package name --------
@@ -57,12 +57,12 @@ $(BUILD_DIR) $(OBJ_DIR) $(BIN_DIR) $(LIB_DIR) $(INCLUDE_DIR):
 $(OBJ_DIR)/util:
 	mkdir -p $@
 
-# Ensure exercises links succeed by building libs first
-exercises: libraries
-
 # Default target
 .PHONY: all
 all: libraries exercises
+
+# Ensure exercises links succeed by building libs first
+exercises: libraries
 
 # ============================================================
 # Convenience targets
@@ -92,5 +92,13 @@ print-vars:
 
 .PHONY: test
 test:
+	@echo "Running exercise_1_1"
+	@$(BIN_DIR)/exercise_1_1
+	@echo "Running exercise_1_2"
+	@$(BIN_DIR)/exercise_1_2
+	@echo "Running exercise_1_3"
+	@$(BIN_DIR)/exercise_1_3
 	@echo "Running exercise_2_1"
-	@$(BIN_DIR)/exercise_2_1 || echo ": Failed to run exercise_2_1, stat $$?"
+	mpirun -np 128 $(BIN_DIR)/exercise_2_1
+	@echo "Running exercise_2_2"
+	mpirun -np 128 $(BIN_DIR)/exercise_2_2

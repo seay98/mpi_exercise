@@ -123,10 +123,13 @@ void DGEMV(
     //     alpha, A, ldA,
     //     x, incx,
     //     beta, y, incy);
-    for (int j = 0; j < m; ++j) {
-        y[j*incy] *= beta;
-        for (int i = 0; i < n; ++i) {
-            y[j*incy] += alpha * A[j + i*ldA] * x[i*incx];
+
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < m; ++i) {
+            if (j == 0) {
+                y[i*incy] *= beta;
+            }
+            y[i*incy] += alpha * A[i + j*ldA] * x[j*incx];
         }
     }
 }
@@ -145,12 +148,11 @@ void rowwise_DGEMV(
     //     alpha, A, ldA,
     //     x, incx,
     //     beta, y, incy);
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < m; ++j) {
-            if (i == 0) {
-                y[j*incy] *= beta;
-            }
-            y[j*incy] += alpha * A[j + i*ldA] * x[i*incx];
+
+    for (int i = 0; i < m; ++i) {
+        y[i*incy] *= beta;
+        for (int j = 0; j < n; ++j) {
+            y[i*incy] += alpha * A[i + j*ldA] * x[j*incx];
         }
     }
 }
@@ -198,7 +200,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "rowwise_DGEMV failed for: m=%d, n=%d\n", m, n);
             all_test_pass = false;
         }
-        printf("Duration of case m=%d, n=%d: columnwise=%lf, rowwise=%lf\n", m, n, rowwise_duration, columnwise_duration);
+        printf("Duration of case m=%d, n=%d: columnwise=%lf, rowwise=%lf\n", m, n, columnwise_duration, rowwise_duration);
     }
 
     if (!all_test_pass) {

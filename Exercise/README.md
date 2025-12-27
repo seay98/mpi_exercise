@@ -88,8 +88,8 @@ BLAS incorporates a scaling operations in the multiplication as they appear comm
 
 ```
 process xGEMV(m, n, alpha, A, ldA, x, incx, beta, y, incy)
-  for j = 0:(m-1)
-    for i = 0:(n-1)
+  for j = 0:(n-1)
+    for i = 0:(m-1)
       y[i*incy] <- alpha*A[i+j*ldA]*x[i*incx] + beta*y[i*incy]
     end
   end
@@ -111,16 +111,16 @@ $$
 
 The pattern of memory access now matters. Due to caching, it is faster to access random access memory in a sequential manner. Thus the $j \to i$ loop
 ```
-for j = 0:(m-1)
-  for i = 0:(n-1)
+for j = 0:(n-1)
+  for i = 0:(m-1)
     y[i*incy] <- alpha*A[i+j*ldA]*x[i*incx] + beta*y[i*incy]
   end
 end
 ```
 is faster than the $i \to j$ for loop
 ```
-for i = 0:(n-1)
-  for j = 0:(m-1)
+for i = 0:(m-1)
+  for j = 0:(n-1)
     y[i*incy] <- alpha*A[i+j*ldA]*x[i*incx] + beta*y[i*incy]
   end
 end

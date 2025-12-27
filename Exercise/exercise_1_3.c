@@ -132,9 +132,9 @@ void DGEMM(
     //     B, ldB,
     //     beta, C, ldC);
 
-    for (int j = 0; j < m; ++j) {
+    for (int i = 0; i < n; ++i) {
         for (int l = 0; l < k; ++l) {
-            for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < m; ++j) {
                 if (l == 0) {
                     C[j + i*ldC] *= beta;
                 }
@@ -160,9 +160,9 @@ void rowwise_DGEMM(
     //     B, ldB,
     //     beta, C, ldC);
 
-    for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < m; ++j) {
         for (int l = 0; l < k; ++l) {
-            for (int j = 0; j < m; ++j) {
+            for (int i = 0; i < n; ++i) {
                 if (l == 0) {
                     C[j + i*ldC] *= beta;
                 }
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "rowwise_DGEMM failed for: m=%d, n=%d, k=%d\n", m, n, k);
             all_test_pass = false;
         }
-        printf("Duration of case m=%d, n=%d, k=%d: columnwise=%lf, rowwise=%lf\n", m, n, k, rowwise_duration, columnwise_duration);
+        printf("Duration of case m=%d, n=%d, k=%d: columnwise=%lf, rowwise=%lf\n", m, n, k, columnwise_duration, rowwise_duration);
     }
 
     if (!all_test_pass) {
